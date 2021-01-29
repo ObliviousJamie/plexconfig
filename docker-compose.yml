@@ -1,0 +1,134 @@
+version: '3.3'
+services:
+    transmission-openvpn:
+        container_name: transmission
+        dns:
+            - 9.9.9.9
+            - 8.8.8.8
+        networks: 
+            - plexnet
+        restart: always
+        cap_add:
+            - NET_ADMIN
+        volumes:
+            - '${MOUNT_POINT}:/data'
+        environment:
+            - OPENVPN_PROVIDER=${VPN_PROVIDER}
+            - OPENVPN_CONFIG=${VPN_COUNTRY}
+            - OPENVPN_USERNAME=${VPN_USER}
+            - OPENVPN_PASSWORD=${VPN_PASSWORD}
+            - LOCAL_NETWORK=192.168.0.0/16
+        logging:
+            driver: json-file
+            options:
+                max-size: 80m
+        ports:
+            - '9091:9091'
+        image: haugene/transmission-openvpn
+    plex:
+        container_name: plex
+        depends_on: 
+            - transmission-openvpn
+        # TODO probably don't need this running via plexnet
+        networks: 
+            - plexnet
+        image: plexinc/pms-docker
+        restart: unless-stopped
+        ports:
+          - 32400:32400/tcp
+          - 3005:3005/tcp
+          - 8324:8324/tcp
+          - 32469:32469/tcp
+          - 1900:1900/udp
+          - 32410:32410/udp
+          - 32412:32412/udp
+          - 32413:32413/udp
+          - 32414:32414/udp
+        environment:
+          - TZ=GB
+          - PLEX_CLAIM=${PLEX_CLAIM}
+          - ADVERTISE_IP=${PLEX_IP}
+        hostname: ${PLEX_HOSTNAME}
+        volumes:
+          - plexconfig:/config # See: https://github.com/plexinc/pms-docker#windows-not-recommended
+          - ${MOUNT_POINT}:/transcode
+          - ${MOUNT_POINT}:/data
+    jackett:
+        image: linuxserver/jackett
+        container_name: jackett
+        depends_on: 
+            - transmission-openvpn
+        networks: 
+            - plexnet
+        restart: always
+        networks:
+          - plexnet
+        environment:
+          - PGID=1001
+          - PUID=1001
+          - TZ=Europe/London
+        volumes:
+          - ${MOUNT_POINT}/jackett/config:/config
+          - ${MOUNT_POINT}/jackett/downloads:/downloads
+        ports:
+            - "9117:9117"
+    sonarr:
+        image: linuxserver/sonarr
+        container_name: sonarr
+        depends_on: 
+            - transmission-openvpn
+        networks: 
+            - plexnet
+        environment:
+          - PUID=1000
+          - PGID=1000
+          - TZ=Europe/London
+        volumes:
+          - ${MOUNT_POINT}/sonarr:/config
+          - ${MOUNT_POINT}/sonarr:/tv
+          - ${MOUNT_POINT}/sonarr:/downloads
+        ports:
+          - 8989:8989
+        restart: unless-stopped
+    radarr:
+        image: linuxserver/radarr
+        container_name: radarr
+        depends_on: 
+            - transmission-openvpn
+        networks: 
+            - plexnet
+        environment:
+          - PUID=1000
+          - PGID=1000
+          - TZ=Europe/London
+        volumes:
+          - ${MOUNT_POINT}/radarr:/config
+          - ${MOUNT_POINT}/radarr:/tv
+          - ${MOUNT_POINT}/radarr:/downloads
+        ports:
+          - 7878:7878
+        restart: unless-stopped
+    bazarr:
+        image: linuxserver/bazarr
+        container_name: bazarr
+        # TODO probably don't need this running via plexnet
+        depends_on: 
+            - transmission-openvpn
+        networks: 
+            - plexnet
+        environment:
+          - PUID=1000
+          - PGID=1000
+          - TZ=Europe/London
+        volumes:
+          - ${MOUNT_POINT}/bazarr:/config
+          - ${MOUNT_POINT}/bazarr:/movies
+          - ${MOUNT_POINT}/bazarr:/tv
+        ports:
+          - 6767:6767
+        restart: unless-stopped
+volumes: 
+  plexconfig:
+networks: 
+    plexnet:
+        driver: bridge
