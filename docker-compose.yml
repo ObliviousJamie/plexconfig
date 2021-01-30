@@ -7,16 +7,17 @@ services:
             - 8.8.8.8
         networks: 
             - plexnet
-        restart: always
+        restart: unless-stopped
         cap_add:
             - NET_ADMIN
         volumes:
-            - '${MOUNT_POINT}:/data'
+            - '${MOUNT_POINT}/transmission:/data'
         environment:
             - OPENVPN_PROVIDER=${VPN_PROVIDER}
             - OPENVPN_CONFIG=${VPN_COUNTRY}
             - OPENVPN_USERNAME=${VPN_USER}
             - OPENVPN_PASSWORD=${VPN_PASSWORD}
+            - OPENVPN_OPTS=--inactive 3600 --ping 10 --ping-exit 60
             - LOCAL_NETWORK=192.168.0.0/16
         logging:
             driver: json-file
@@ -60,7 +61,7 @@ services:
             - transmission-openvpn
         networks: 
             - plexnet
-        restart: always
+        restart: unless-stopped
         networks:
           - plexnet
         environment:
