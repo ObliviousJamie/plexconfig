@@ -24,13 +24,17 @@ services:
             options:
                 max-size: 80m
         ports:
-            - '9091:9091'
+            # transmission
+            - 9091:9091
+              # radarr
+            - 7878:7878
+              # sonarr
+            - 8989:8989
+              # jackett
+            - "9117:9117"
         image: haugene/transmission-openvpn
     plex:
         container_name: plex
-        depends_on: 
-            - transmission-openvpn
-        # TODO probably don't need this running via plexnet
         networks: 
             - plexnet
         image: plexinc/pms-docker
@@ -53,17 +57,14 @@ services:
         volumes:
           - plexconfig:/config # See: https://github.com/plexinc/pms-docker#windows-not-recommended
           - ${MOUNT_POINT}:/transcode
-          - ${MOUNT_POINT}:/data
+          - ${MOUNT_POINT}/media:/data
     jackett:
         image: linuxserver/jackett
         container_name: jackett
         depends_on: 
             - transmission-openvpn
-        networks: 
-            - plexnet
+        network_mode: "service:transmission-openvpn"
         restart: unless-stopped
-        networks:
-          - plexnet
         environment:
           - PGID=1001
           - PUID=1001
@@ -71,50 +72,39 @@ services:
         volumes:
           - ${MOUNT_POINT}/jackett/config:/config
           - ${MOUNT_POINT}/jackett/downloads:/downloads
-        ports:
-            - "9117:9117"
     sonarr:
         image: linuxserver/sonarr
         container_name: sonarr
         depends_on: 
             - transmission-openvpn
-        networks: 
-            - plexnet
+        network_mode: "service:transmission-openvpn"
         environment:
           - PUID=1000
           - PGID=1000
           - TZ=Europe/London
         volumes:
-          - ${MOUNT_POINT}/sonarr:/config
-          - ${MOUNT_POINT}/sonarr:/tv
-          - ${MOUNT_POINT}/sonarr:/downloads
-        ports:
-          - 8989:8989
+          - ${MOUNT_POINT}/media/TV:/tv
+          - ${MOUNT_POINT}/sonarr/config:/config
+          - ${MOUNT_POINT}/transmission:/data
         restart: unless-stopped
     radarr:
         image: linuxserver/radarr
         container_name: radarr
         depends_on: 
             - transmission-openvpn
-        networks: 
-            - plexnet
+        network_mode: "service:transmission-openvpn"
         environment:
           - PUID=1000
           - PGID=1000
           - TZ=Europe/London
         volumes:
-          - ${MOUNT_POINT}/radarr:/config
-          - ${MOUNT_POINT}/radarr:/tv
-          - ${MOUNT_POINT}/radarr:/downloads
-        ports:
-          - 7878:7878
+          - ${MOUNT_POINT}/media/Movies:/movies
+          - ${MOUNT_POINT}/radarr/config:/config
+          - ${MOUNT_POINT}/transmission:/data
         restart: unless-stopped
     bazarr:
         image: linuxserver/bazarr
         container_name: bazarr
-        # TODO probably don't need this running via plexnet
-        depends_on: 
-            - transmission-openvpn
         networks: 
             - plexnet
         environment:
@@ -122,9 +112,9 @@ services:
           - PGID=1000
           - TZ=Europe/London
         volumes:
+          - ${MOUNT_POINT}/media/Movies:/movies
+          - ${MOUNT_POINT}/media/TV:/tv
           - ${MOUNT_POINT}/bazarr:/config
-          - ${MOUNT_POINT}/bazarr:/movies
-          - ${MOUNT_POINT}/bazarr:/tv
         ports:
           - 6767:6767
         restart: unless-stopped
