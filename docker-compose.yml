@@ -85,6 +85,7 @@ services:
         volumes:
           - ${MOUNT_POINT}/media/TV:/tv
           - ${MOUNT_POINT}/sonarr/config:/config
+          - ${MOUNT_POINT}/sonarr/recyclebin:/recyclebin
           - ${MOUNT_POINT}/transmission:/data
         restart: unless-stopped
     radarr:
@@ -100,6 +101,7 @@ services:
         volumes:
           - ${MOUNT_POINT}/media/Movies:/movies
           - ${MOUNT_POINT}/radarr/config:/config
+          - ${MOUNT_POINT}/radarr/recyclebin:/recyclebin
           - ${MOUNT_POINT}/transmission:/data
         restart: unless-stopped
     bazarr:
