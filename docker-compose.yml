@@ -24,14 +24,16 @@ services:
             options:
                 max-size: 80m
         ports:
-            # transmission
+              # transmission
             - 9091:9091
+              # bazarr
+            - 6767:6767
               # radarr
             - 7878:7878
               # sonarr
             - 8989:8989
               # jackett
-            - "9117:9117"
+            - 9117:9117
         image: haugene/transmission-openvpn
     plex:
         container_name: plex
@@ -107,8 +109,9 @@ services:
     bazarr:
         image: linuxserver/bazarr
         container_name: bazarr
-        networks: 
-            - plexnet
+        depends_on: 
+            - transmission-openvpn
+        network_mode: "service:transmission-openvpn"
         environment:
           - PUID=1000
           - PGID=1000
@@ -117,8 +120,6 @@ services:
           - ${MOUNT_POINT}/media/Movies:/movies
           - ${MOUNT_POINT}/media/TV:/tv
           - ${MOUNT_POINT}/bazarr:/config
-        ports:
-          - 6767:6767
         restart: unless-stopped
 volumes: 
   plexconfig:
